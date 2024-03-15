@@ -31,7 +31,7 @@ pub fn start_game() {
     println!("Your letter is: {letter}");
     wait_for_user();
 
-    let card = cards::draw_card();
+    let card = cards::draw_card(6);
     println!("Your card contains the following categories:");
     for category in card {
         println!("- {category}")
