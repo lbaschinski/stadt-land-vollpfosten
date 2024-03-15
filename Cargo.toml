@@ -8,3 +8,4 @@ authors = ["Lucas Baschinski <12460927+lbaschinski@users.noreply.github.com>"]
 
 [dependencies]
 crossterm = "0.27.0"
+rand = "0.8.5"
