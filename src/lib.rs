@@ -19,23 +19,29 @@ fn wait_for_user() {
     let _ = stdin.read_line(&mut String::new()).unwrap();
 }
 
-pub fn start_game() {
+/// Start one round of the game
+pub fn start_round() {
     println!("Please write down the current timeout:");
     let mut input = String::new();
     io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
     let timeout = timer::TimeoutFromString::new(input);
+    println!();
 
     let letter = dice::roll_dice();
     println!("Your letter is: {letter}");
     wait_for_user();
+    println!();
 
     let card = cards::draw_card(6);
     println!("Your card contains the following categories:");
     for category in card {
         println!("- {category}")
     }
+    println!();
+
     timer::start_timer(timeout);
-    println!("Your time is over!")
+    println!("Your time is over!");
+    println!()
 }
