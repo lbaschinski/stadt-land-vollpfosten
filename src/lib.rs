@@ -10,6 +10,6 @@ pub fn start_game() {
     for category in card {
         println!("- {category}")
     }
-    timer::start_timer();
+    timer::start_timer(60);
     println!("Your time is over!")
 }
