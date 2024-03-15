@@ -1,7 +1,7 @@
 use std::io;
 use std::io::prelude::*;
 
-pub mod cards;
+mod cards;
 mod dice;
 mod timer;
 
@@ -20,7 +20,7 @@ fn wait_for_user() {
 }
 
 /// Start one round of the game
-pub fn start_round(game_card_collection: &Vec<String>) {
+fn start_round(game_card_collection: &Vec<String>) {
     println!("Please write down the current timeout:");
     let mut input = String::new();
     io::stdin()
@@ -44,4 +44,22 @@ pub fn start_round(game_card_collection: &Vec<String>) {
     timer::start_timer(timeout);
     println!("Your time is over!");
     println!()
+}
+
+pub fn start_game() {
+    let category_collection = cards::choose_collections();
+
+    loop {
+        start_round(&category_collection);
+        println!("Do you want to start a new round? (y/n)");
+        let mut input = String::new();
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read line");
+        if input.trim() != "y" {
+            println!("Stopping the game...");
+            break
+        }
+        println!()
+    }
 }
