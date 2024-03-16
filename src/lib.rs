@@ -46,6 +46,46 @@ fn start_round(category_collection: &Vec<String>) {
     println!()
 }
 
+pub fn add_categories() {
+    println!("Please choose a category to add to:");
+    println!("- default");
+    println!("- junior");
+    println!("- adult");
+    let mut collection = String::new();
+    io::stdin()
+        .read_line(&mut collection)
+        .expect("Failed to read line");
+    println!();
+    let filename = if collection.trim() == "default" {
+        "src/categories/default_edition.txt"
+    }
+    else if collection.trim() == "junior" {
+        "src/categories/junior_edition.txt"
+    }
+    else if collection.trim() == "adult" {
+        "src/categories/adult_edition.txt"
+    }
+    else {
+        println!("Unknown category: {}", collection.trim());
+        return ();
+    };
+
+    loop {
+        println!("Please input the category you want to add or write 'exit' to return:");
+        let mut category = String::new();
+        io::stdin()
+            .read_line(&mut category)
+            .expect("Failed to read line");
+        if category.trim() == "exit" {
+            println!("Returning...");
+            println!();
+            break
+        }
+        println!();
+        cards::add_category(filename, category.trim());
+    }
+}
+
 pub fn start_game() {
     let category_collection = cards::choose_collections();
 
@@ -58,6 +98,7 @@ pub fn start_game() {
             .expect("Failed to read line");
         if input.trim() != "y" {
             println!("Stopping the game...");
+            println!();
             break
         }
         println!()

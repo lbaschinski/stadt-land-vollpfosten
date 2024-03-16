@@ -1,6 +1,6 @@
 use rand::seq::SliceRandom;
-use std::fs::read_to_string;
-use std::io;
+use std::fs::{OpenOptions, read_to_string};
+use std::io::{self, prelude::*};
 
 fn load_categories() -> (Vec<String>, Vec<String>, Vec<String>) {
     let mut default_categories = Vec::new();
@@ -16,6 +16,18 @@ fn load_categories() -> (Vec<String>, Vec<String>, Vec<String>) {
         adult_categories.push(line.to_string());
     }
     (default_categories, junior_categories, adult_categories)
+}
+
+pub fn add_category(filename: &str, category: &str) {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .append(true)
+        .open(filename)
+        .unwrap();
+    if let Err(e) = writeln!(file, "{}", category) {
+        eprintln!("Couldn't write to file: {}", e);
+    }
 }
 
 pub fn choose_collections() -> Vec<String> {
