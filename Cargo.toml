@@ -7,5 +7,10 @@ authors = ["Lucas Baschinski <12460927+lbaschinski@users.noreply.github.com>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+axum = "0.7.4"
 crossterm = "0.27.0"
+minijinja = "1.0.13"
 rand = "0.8.5"
+serde = { version="1.0.197", features = ["derive"] }
+tokio = { version = "1.36.0", features = ["full"] }
+tokio-test="0.4.4"

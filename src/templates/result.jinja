@@ -1,0 +1,19 @@
+{% extends "layout" %}
+{% block title %}{{ super() }} | {{ title }} {% endblock %}
+{% block body %}
+<p>Timeout: <b>{{ timeout }}</b> seconds</p>
+<p>Letter: <b>{{ letter }}</b></p>
+<p>Categories:
+     <ul>
+        {% for category in card %}
+            <li>{{ category }}</li>
+        {% endfor %}
+    </ul>
+</p>
+<form action="/start" method="get">
+  <label for="start">
+    Start next round?
+    <input type="submit" name="start" value="Start">
+  </label>
+</form>
+{% endblock %}

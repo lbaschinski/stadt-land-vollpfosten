@@ -1,0 +1,14 @@
+{% extends "layout" %}
+{% block title %}{{ super() }} | {{ title }} {% endblock %}
+{% block body %}
+<h1>{{ title }}</h1>
+{% if categories|length == 0 %}
+    No category collections entered yet!
+{% else %}
+    <ul>
+        {% for category in categories %}
+            <li>{{ category }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+{% endblock %}

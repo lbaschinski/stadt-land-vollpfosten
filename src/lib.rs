@@ -4,6 +4,7 @@ use std::io::prelude::*;
 mod cards;
 mod dice;
 mod timer;
+pub mod web_app;
 
 /// Wait for user input to continue
 fn wait_for_user() {

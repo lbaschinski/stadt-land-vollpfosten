@@ -1,0 +1,34 @@
+{% extends "layout" %}
+{% block title %}{{ super() }} | {{ title }} {% endblock %}
+{% block body %}
+{% if timeout is defined and timeout == 0 %}
+  <form action="/start" method="post">
+    <label for="timeout">
+      Enter current timeout:
+      <input type="number" name="timeout" required>
+    </label>
+    <input type="submit" value="Submit">
+  </form>
+{% else %}
+  <p>Your current timeout is {{ timeout }} seconds.</p>
+  {% if letter == none %}
+    <form action="/start" method="post">
+      <label for="letter">
+        Throw the dice:
+        <input type="hidden" name="timeout" value="{{ timeout }}">
+        <input type="submit" name="letter" value="⚅" required>
+      </label>
+    </form>
+  {% else %}
+    <p>Your current letter is '{{ letter }}'.</p>
+    <form action="/round" method="post">
+      <label for="round">
+        Do you want to start the round?
+        <input type="hidden" name="timeout" value="{{ timeout }}">
+        <input type="hidden" name="letter" value="{{ letter }}">
+        <input type="submit" name="round" value="Go" required>
+      </label>
+    </form>
+  {% endif %}
+{% endif %}
+{% endblock %}

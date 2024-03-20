@@ -2,20 +2,12 @@ use rand::seq::SliceRandom;
 use std::fs::{OpenOptions, read_to_string};
 use std::io::{self, prelude::*};
 
-fn load_categories() -> (Vec<String>, Vec<String>, Vec<String>) {
-    let mut default_categories = Vec::new();
-    let mut junior_categories = Vec::new();
-    let mut adult_categories = Vec::new();
-    for line in read_to_string("src/categories/default_edition.txt").unwrap().lines() {
-        default_categories.push(line.to_string());
+pub fn load_categories(name: &str) -> Vec<String> {
+    let mut categories = Vec::new();
+    for line in read_to_string(format!("src/categories/{name}_edition.txt")).unwrap().lines() {
+        categories.push(line.to_string());
     }
-    for line in read_to_string("src/categories/junior_edition.txt").unwrap().lines() {
-        junior_categories.push(line.to_string());
-    }
-    for line in read_to_string("src/categories/adult_edition.txt").unwrap().lines() {
-        adult_categories.push(line.to_string());
-    }
-    (default_categories, junior_categories, adult_categories)
+    categories
 }
 
 pub fn add_category(filename: &str, category: &str) {
@@ -31,8 +23,6 @@ pub fn add_category(filename: &str, category: &str) {
 }
 
 pub fn choose_collections() -> Vec<String> {
-    let (default_categories, junior_categories, adult_categories) = load_categories();
-
     println!("Please choose up to three category collections:");
     println!("- default");
     println!("- junior");
@@ -44,12 +34,15 @@ pub fn choose_collections() -> Vec<String> {
             .read_line(&mut collection)
             .expect("Failed to read line");
         if collection.trim() == "default" {
+            let default_categories = load_categories(collection.trim());
             category_collections.extend(default_categories.clone());
         }
         if collection.trim() == "junior" {
+            let junior_categories = load_categories(collection.trim());
             category_collections.extend(junior_categories.clone());
         }
         if collection.trim() == "adult" {
+            let adult_categories = load_categories(collection.trim());
             category_collections.extend(adult_categories.clone());
         }
         if collection == "\n" {
