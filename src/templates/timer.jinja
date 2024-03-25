@@ -1,0 +1,31 @@
+{% extends "layout" %}
+{% block title %}{{ super() }} | {{ title }} {% endblock %}
+{% block body %}
+<p>Timeout: <b>{{ timeout }}</b> seconds</p>
+<p>Letter: <b>{{ letter }}</b></p>
+<p>Category: <b>{{ category }}</b></p>
+
+<form action="/timer" method="post">
+  <label for="success">
+    Success! Show next:
+    <input type="submit" name="current" value="{{ next }}">
+    <input type="hidden" name="timeout" value="{{ timeout }}">
+    <input type="hidden" name="letter" value="{{ letter }}">
+  </label>
+</form>
+<form action="/timer" method="post">
+  <label for="next">
+    Next! Show next:
+    <input type="submit" name="current" value="{{ next }}">
+    <input type="hidden" name="timeout" value="{{ timeout }}">
+    <input type="hidden" name="letter" value="{{ letter }}">
+  </label>
+</form>
+<form action="/result" method="post">
+  <label for="stop">
+    <input type="submit" name="stop" value="Stop">
+    <input type="hidden" name="timeout" value="{{ timeout }}">
+    <input type="hidden" name="letter" value="{{ letter }}">
+  </label>
+</form>
+{% endblock %}

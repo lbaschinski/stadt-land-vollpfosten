@@ -1,31 +1,34 @@
 {% extends "layout" %}
 {% block title %}{{ super() }} | {{ title }} {% endblock %}
 {% block body %}
-<p>Timeout: <b>{{ timeout }}</b> seconds</p>
-<p>Letter: <b>{{ letter }}</b></p>
-<p>Category: <b>{{ category }}</b></p>
-
-<form action="/round" method="post">
-  <label for="success">
-    Success! Show next:
-    <input type="submit" name="current" value="{{ next }}">
-    <input type="hidden" name="timeout" value="{{ timeout }}">
-    <input type="hidden" name="letter" value="{{ letter }}">
-  </label>
-</form>
-<form action="/round" method="post">
-  <label for="next">
-    Next! Show next:
-    <input type="submit" name="current" value="{{ next }}">
-    <input type="hidden" name="timeout" value="{{ timeout }}">
-    <input type="hidden" name="letter" value="{{ letter }}">
-  </label>
-</form>
-<form action="/result" method="post">
-  <label for="stop">
-    <input type="submit" name="stop" value="Stop">
-    <input type="hidden" name="timeout" value="{{ timeout }}">
-    <input type="hidden" name="letter" value="{{ letter }}">
-  </label>
-</form>
+{% if timeout is not defined or timeout == 0 %}
+  <form action="/round" method="post">
+    <label for="timeout">
+      Enter current timeout:
+      <input type="number" name="timeout" required>
+    </label>
+    <input type="submit" value="Submit">
+  </form>
+{% else %}
+  <p>Your current timeout is {{ timeout }} seconds.</p>
+  {% if letter == none %}
+    <form action="/round" method="post">
+      <label for="letter">
+        Throw the dice:
+        <input type="hidden" name="timeout" value="{{ timeout }}">
+        <input type="submit" name="letter" value="⚅" required>
+      </label>
+    </form>
+  {% else %}
+    <p>Your current letter is '{{ letter }}'.</p>
+    <form action="/timer" method="post">
+      <label for="round">
+        Do you want to start the timer?
+        <input type="hidden" name="timeout" value="{{ timeout }}">
+        <input type="hidden" name="letter" value="{{ letter }}">
+        <input type="submit" name="round" value="Go" required>
+      </label>
+    </form>
+  {% endif %}
+{% endif %}
 {% endblock %}

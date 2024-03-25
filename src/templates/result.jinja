@@ -5,15 +5,15 @@
 <p>Letter: <b>{{ letter }}</b></p>
 <p>Categories:
      <ul>
-        {% for category in card %}
+        {% for (category, _) in card %}
             <li>{{ category }}</li>
         {% endfor %}
     </ul>
 </p>
-<form action="/start" method="get">
+<form action="/round" method="get">
   <label for="start">
     Start next round?
-    <input type="submit" name="start" value="Start">
+    <input type="submit" value="Start">
   </label>
 </form>
 {% endblock %}

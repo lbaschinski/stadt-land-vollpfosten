@@ -11,4 +11,16 @@
         {% endfor %}
     </ul>
 {% endif %}
+<form action="/start" method="get">
+  <label for="prepare">
+    Want to add more?
+    <input type="submit" value="Add more">
+  </label>
+</form>
+<form action="/round" method="get">
+  <label for="start">
+    Want to start the game?
+    <input type="submit" value="Start">
+  </label>
+</form>
 {% endblock %}
