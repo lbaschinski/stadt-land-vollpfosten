@@ -155,11 +155,11 @@ async fn post_start_round(State(state): State<Arc<GameState>>, Form(input): Form
     let template = state.environment.get_template("round").unwrap();
 
     let mut round_state = state.round_state.lock().unwrap();
-    *round_state = RoundState::new(input.timeout, input.letter, round_state.reduced_card.clone(), round_state.complete_card.clone());
+    *round_state = RoundState::new(input.timeout, input.letter, None, None);
 
     if input.letter.is_some() {
         let letter = dice::roll_dice().chars().next();
-        *round_state = RoundState::new(round_state.timeout, letter, round_state.reduced_card.clone(), round_state.complete_card.clone());
+        *round_state = RoundState::new(round_state.timeout, letter, None, None);
     }
 
     let rendered = template
@@ -208,7 +208,7 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
     };
     *round_state = RoundState::new(input.timeout, input.letter, Some(reduced_card.clone()), Some(complete_card.clone()));
     // size of `reduced_card` and `current_index` need to be aligned!
-    category = dbg!(reduced_card[current_index].clone());
+    category = reduced_card[current_index].clone();
 
     let rendered = template
         .render(context! {
