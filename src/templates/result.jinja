@@ -5,7 +5,7 @@
 <p>Letter: <b>{{ letter }}</b></p>
 <p>Categories:
      <ul>
-        {% for (category, _) in card %}
+        {% for category in card %}
             <li>{{ category }}</li>
         {% endfor %}
     </ul>

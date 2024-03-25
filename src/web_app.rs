@@ -22,19 +22,25 @@ struct GameState {
 struct RoundState {
     timeout: u32,
     letter: Option<char>,
-    card: Option<Vec<(String, bool)>>,
+    reduced_card: Option<Vec<String>>,
+    complete_card: Option<Vec<String>>,
 }
 
 impl RoundState {
-    pub fn new(timeout: u32, letter: Option<char>, card: Option<Vec<(String, bool)>>) -> RoundState {
-        RoundState { timeout, letter, card }
+    pub fn new
+        ( timeout: u32
+        , letter: Option<char>
+        , reduced_card: Option<Vec<String>>
+        , complete_card: Option<Vec<String>>
+    ) -> RoundState {
+        RoundState { timeout, letter, reduced_card, complete_card }
     }
 }
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct GameInput {
-    category: String,
+    collection_name: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -42,7 +48,9 @@ struct GameInput {
 struct RoundInput {
     timeout: u32,
     letter: Option<char>,
-    current: Option<usize>,
+    category: Option<String>,
+    success: Option<bool>,
+    current_index: Option<usize>,
 }
 
 pub async fn serve() {
@@ -57,7 +65,7 @@ pub async fn serve() {
 
     let game_state = Arc::new(GameState
         { categories: Mutex::new(Vec::new())
-        , round_state: Mutex::new(RoundState::new(0, None, None))
+        , round_state: Mutex::new(RoundState::new(0, None, None, None))
         , environment: env
         });
 
@@ -102,7 +110,7 @@ async fn handler_start_game(State(state): State<Arc<GameState>>) -> Result<Html<
 
 async fn post_start_game(State(state): State<Arc<GameState>>, Form(input): Form<GameInput>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("categories").unwrap();
-    let categories = cards::load_categories(&input.category);
+    let categories = cards::load_categories(&input.collection_name);
     {
         let mut cat = state.categories.lock().unwrap();
         cat.extend(categories.clone());
@@ -147,11 +155,11 @@ async fn post_start_round(State(state): State<Arc<GameState>>, Form(input): Form
     let template = state.environment.get_template("round").unwrap();
 
     let mut round_state = state.round_state.lock().unwrap();
-    *round_state = RoundState::new(input.timeout, input.letter, round_state.card.clone());
+    *round_state = RoundState::new(input.timeout, input.letter, round_state.reduced_card.clone(), round_state.complete_card.clone());
 
     if input.letter.is_some() {
         let letter = dice::roll_dice().chars().next();
-        *round_state = RoundState::new(round_state.timeout, letter, round_state.card.clone());
+        *round_state = RoundState::new(round_state.timeout, letter, round_state.reduced_card.clone(), round_state.complete_card.clone());
     }
 
     let rendered = template
@@ -168,30 +176,39 @@ async fn post_start_round(State(state): State<Arc<GameState>>, Form(input): Form
 async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form<RoundInput>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("timer").unwrap();
     let category: String;
-    let next: usize;
-    let drawn_card: Vec<(String, bool)>;
 
     let mut round_state = state.round_state.lock().unwrap();
-    // TODO: handle empty list when prepare was not done
     let categories = state.categories.lock().unwrap();
-    drawn_card = match &round_state.card {
-        Some(c) => c.to_vec(),
-        None => {
-            let dc = cards::draw_card(&categories, 6);
-            let mut dc_tuple = Vec::new();
-            for c in dc {
-                dc_tuple.push((c, false));
+    let mut current_index = input.current_index.unwrap_or(0);
+    let category_amount;
+
+    let (reduced_card, complete_card) = match &round_state.complete_card {
+        Some(c) => {
+            let cc = c.to_vec();
+            let mut rc = round_state.reduced_card.clone().unwrap();
+            let success = input.success.unwrap();
+            let category = input.category.unwrap();
+            if success {
+                let i = rc.iter().position(|x| *x == category).unwrap();
+                // since this removes the current element, we don't need to `+1` the `current_index` here
+                // since the next element is now at the index of the removed element
+                rc.remove(i);
+            } else {
+                // since no element was removed, either go back to 0 or `+1` to the current index
+                category_amount = round_state.reduced_card.as_ref().unwrap().len();
+                current_index = if current_index == (category_amount - 1) { 0 } else { current_index + 1 };
             }
-            dc_tuple
+            (rc, cc)
+        },
+        None => {
+            category_amount = 6;
+            let dc = cards::draw_card(&categories, category_amount as u32);
+            (dc.clone(), dc)
         },
     };
-    *round_state = RoundState::new(input.timeout, input.letter, Some(drawn_card.clone()));
-    let current_num = match input.current {
-        Some(num) => num,
-        None => 0,
-    };
-    next = if current_num == 5 { 0 } else { current_num + 1 };
-    category = drawn_card[current_num].0.clone();
+    *round_state = RoundState::new(input.timeout, input.letter, Some(reduced_card.clone()), Some(complete_card.clone()));
+    // size of `reduced_card` and `current_index` need to be aligned!
+    category = dbg!(reduced_card[current_index].clone());
 
     let rendered = template
         .render(context! {
@@ -199,8 +216,8 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
             timeout => round_state.timeout,
             letter => round_state.letter,
             category => category,
-            next => next,
-            card => round_state.card,
+            current_index => current_index,
+            rest => reduced_card
         })
         .unwrap();
 
@@ -217,7 +234,7 @@ async fn post_result(State(state): State<Arc<GameState>>, Form(input): Form<Roun
             title => "Round Results",
             timeout => input.timeout,
             letter => input.letter,
-            card => round_state.card,
+            card => round_state.complete_card,
         })
         .unwrap();
 

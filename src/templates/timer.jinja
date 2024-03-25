@@ -5,25 +5,32 @@
 <p>Letter: <b>{{ letter }}</b></p>
 <p>Category: <b>{{ category }}</b></p>
 
-<form action="/timer" method="post">
-  <label for="success">
-    Success! Show next:
-    <input type="submit" name="current" value="{{ next }}">
-    <input type="hidden" name="timeout" value="{{ timeout }}">
-    <input type="hidden" name="letter" value="{{ letter }}">
-  </label>
-</form>
-<form action="/timer" method="post">
-  <label for="next">
-    Next! Show next:
-    <input type="submit" name="current" value="{{ next }}">
-    <input type="hidden" name="timeout" value="{{ timeout }}">
-    <input type="hidden" name="letter" value="{{ letter }}">
-  </label>
-</form>
+{% if rest|length > 1 %}
+  <p>{{ rest|length }}</p>
+  <form action="/timer" method="post">
+    <label for="success">
+      <input type="submit" value="Success!">
+      <input type="hidden" name="success" value="true">
+      <input type="hidden" name="current_index" value="{{ current_index }}">
+      <input type="hidden" name="category" value="{{ category }}">
+      <input type="hidden" name="timeout" value="{{ timeout }}">
+      <input type="hidden" name="letter" value="{{ letter }}">
+    </label>
+  </form>
+  <form action="/timer" method="post">
+    <label for="next">
+      <input type="submit" value="Next!">
+      <input type="hidden" name="success" value="false">
+      <input type="hidden" name="current_index" value="{{ current_index }}">
+      <input type="hidden" name="category" value="{{ category }}">
+      <input type="hidden" name="timeout" value="{{ timeout }}">
+      <input type="hidden" name="letter" value="{{ letter }}">
+    </label>
+  </form>
+{% endif %}
 <form action="/result" method="post">
   <label for="stop">
-    <input type="submit" name="stop" value="Stop">
+    <input type="submit" value="Stop">
     <input type="hidden" name="timeout" value="{{ timeout }}">
     <input type="hidden" name="letter" value="{{ letter }}">
   </label>
