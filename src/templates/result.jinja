@@ -1,19 +1,40 @@
 {% extends "layout" %}
 {% block title %}{{ super() }} | {{ title }} {% endblock %}
+{% block style%}
+table {border-collapse: collapse; border: 1px solid #000; padding: 10px 20px 10px 20px;}
+td.center {text-align: center;}
+th {border: 1px solid #000; padding: 10px 20px 10px 20px;}
+tr {border: 1px solid #000; padding: 10px 20px 10px 20px;}
+td {border: 1px solid #000; padding: 10px 20px 10px 20px;}
+tr:nth-child(even) {background-color: #f2f2f2;}
+div {padding-top: 20px;}
+{% endblock %}
 {% block body %}
 <p>Timeout: <b>{{ timeout }}</b> seconds</p>
 <p>Letter: <b>{{ letter }}</b></p>
-<p>Categories:
-     <ul>
-        {% for category in card %}
-            <li>{{ category }}</li>
-        {% endfor %}
-    </ul>
-</p>
-<form action="/round" method="get">
-  <label for="start">
-    Start next round?
-    <input type="submit" value="Start">
-  </label>
-</form>
+<table>
+  <caption>Result</caption>
+  <tr>
+    <th>Category Name</th>
+    <th class="center">Success</th>
+  </tr>
+  {% for category in card %}
+    <tr>
+      <td>{{ category }}</td>
+      <td class="center">{% if category in rest %}no{% else %}yes{% endif %}</td>
+    </tr>
+  {% endfor %}
+  <tr>
+    <th class="center">{{ card|length }}</td>
+    <th class="center">{{ card|length - rest|length }}</td>
+  </tr>
+</table>
+<div>
+  <form action="/round" method="get">
+    <label for="start">
+      Start next round?
+      <input type="submit" value="Start">
+    </label>
+  </form>
+</div>
 {% endblock %}

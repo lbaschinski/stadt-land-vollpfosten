@@ -235,7 +235,7 @@ async fn handler_start_timer(State(state): State<Arc<GameState>>) -> Result<Html
 
 async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form<RoundInput>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("timer").unwrap();
-    let category: String;
+    let category: Option<String>;
 
     let mut round_state = state.round_state.lock().unwrap();
     let categories = state.categories.lock().unwrap();
@@ -267,13 +267,13 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
             (dc.clone(), dc)
         },
     };
-    category = reduced_card[current_index].clone();
+    category = if reduced_card.len() == 0 { None } else { Some(reduced_card[current_index].clone()) };
     *round_state = RoundState::new
         ( if input.timeout.is_some() { input.timeout } else { round_state.timeout }
         , round_state.letter
         , Some(reduced_card.clone())
         , Some(complete_card.clone())
-        , Some(category)
+        , category
         , Some(current_index)
     );
 
@@ -298,6 +298,7 @@ async fn handler_result(State(state): State<Arc<GameState>>) -> Result<Html<Stri
     let old_timeout = round_state.timeout.clone();
     let old_letter = round_state.letter.clone();
     let old_card = round_state.complete_card.clone();
+    let old_rest = round_state.reduced_card.clone();
     *round_state = RoundState::empty();
 
     let rendered = template
@@ -306,6 +307,7 @@ async fn handler_result(State(state): State<Arc<GameState>>) -> Result<Html<Stri
             timeout => old_timeout,
             letter => old_letter,
             card => old_card,
+            rest => old_rest,
         })
         .unwrap();
 
