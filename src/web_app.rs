@@ -3,13 +3,16 @@ use axum::{
     extract::Form,
     http::StatusCode,
     response::Html,
-    routing::{get, post},
+    routing::get,
     Router,
 };
 use minijinja::{context, Environment};
 use serde::Deserialize;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
+
 use crate::cards;
 use crate::dice;
 
@@ -73,18 +76,48 @@ pub async fn serve() {
         , environment: env
         });
 
+    let handle = spawn_timeout_thread(Arc::clone(&game_state));
+
     let app = Router::new()
         .route("/", get(handler_home))
         .route("/start", get(handler_start_game).post(post_start_game))
         .route("/categories", get(handler_categories))
         .route("/round", get(handler_start_round).post(post_start_round))
-        .route("/timer", post(post_start_timer))
+        .route("/timer", get(handler_start_timer).post(post_start_timer))
         .route("/result", get(handler_result))
         .with_state(game_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3333").await.unwrap();
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
+    handle.join().unwrap();
+}
+
+fn spawn_timeout_thread(state: Arc<GameState>) -> thread::JoinHandle<()> {
+    thread::spawn(move || {
+        loop {
+            thread::sleep(Duration::from_secs(1));
+            let mut round_state = state.round_state.lock().unwrap();
+            *round_state = match round_state.timeout {
+                Some(t) => RoundState::new
+                    ( Some(if t > 0 { t - 1 } else { t })
+                    , round_state.letter
+                    , round_state.reduced_card.clone()
+                    , round_state.complete_card.clone()
+                    , round_state.category.clone()
+                    , round_state.current_index
+                    ),
+                None => RoundState::new
+                    ( round_state.timeout
+                    , round_state.letter
+                    , round_state.reduced_card.clone()
+                    , round_state.complete_card.clone()
+                    , round_state.category.clone()
+                    , round_state.current_index
+                    ),
+            };
+        };
+    })
 }
 
 async fn handler_home(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
@@ -154,29 +187,46 @@ async fn handler_start_round(State(state): State<Arc<GameState>>) -> Result<Html
     let rendered = template
         .render(context! {
             title => "Start Round",
+            first_round => true,
         })
         .unwrap();
 
     Ok(Html(rendered))
 }
 
-async fn post_start_round(State(state): State<Arc<GameState>>, Form(input): Form<RoundInput>) -> Result<Html<String>, StatusCode> {
+async fn post_start_round(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("round").unwrap();
 
     let mut round_state = state.round_state.lock().unwrap();
-    if input.timeout.is_some() { // first input is only timeout
-        *round_state = RoundState::new(input.timeout, round_state.letter, None, None, None, None);
-    }
-    if input.timeout.is_none() && round_state.letter.is_none() { // second input is to roll (without timeout set again)
+    if round_state.letter.is_none() {
         let letter = dice::roll_dice().chars().next();
-        *round_state = RoundState::new(round_state.timeout, letter, None, None, None, None);
+        *round_state = RoundState::new(None, letter, None, None, None, None);
     }
 
     let rendered = template
         .render(context! {
             title => "Start Round",
+            letter => round_state.letter,
+        })
+        .unwrap();
+
+    Ok(Html(rendered))
+}
+
+// Needed for refreshing the page to show the running timer (never called directly)
+async fn handler_start_timer(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
+    let template = state.environment.get_template("timer").unwrap();
+
+    let round_state = state.round_state.lock().unwrap();
+
+    let rendered = template
+        .render(context! {
+            title => "Start Timer",
             timeout => round_state.timeout,
             letter => round_state.letter,
+            category => round_state.category,
+            current_index => round_state.current_index,
+            rest => round_state.reduced_card
         })
         .unwrap();
 
@@ -219,7 +269,7 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
     };
     category = reduced_card[current_index].clone();
     *round_state = RoundState::new
-        ( round_state.timeout
+        ( if input.timeout.is_some() { input.timeout } else { round_state.timeout }
         , round_state.letter
         , Some(reduced_card.clone())
         , Some(complete_card.clone())

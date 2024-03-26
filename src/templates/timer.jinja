@@ -1,11 +1,12 @@
 {% extends "layout" %}
 {% block title %}{{ super() }} | {{ title }} {% endblock %}
 {% block body %}
+<meta http-equiv="refresh" content="1">
 <p>Timeout: <b>{{ timeout }}</b> seconds</p>
 <p>Letter: <b>{{ letter }}</b></p>
 <p>Category: <b>{{ category }}</b></p>
 
-{% if rest|length > 1 %}
+{% if rest|length > 1 and timeout > 0 %}
   <p>{{ rest|length }}</p>
   <form action="/timer" method="post">
     <label for="success">
