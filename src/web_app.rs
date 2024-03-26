@@ -126,7 +126,7 @@ async fn handler_home(State(state): State<Arc<GameState>>) -> Result<Html<String
     let rendered = template
         .render(context! {
             title => "Stadt Land Vollpfosten - digital helper",
-            welcome_text => "Press 'Start Game' to start a game!",
+            welcome_text => "Press 'Start New Game' to start a game!",
         })
         .unwrap();
 
@@ -221,7 +221,7 @@ async fn handler_start_timer(State(state): State<Arc<GameState>>) -> Result<Html
 
     let rendered = template
         .render(context! {
-            title => "Start Timer",
+            title => "~ Play ~",
             timeout => round_state.timeout,
             letter => round_state.letter,
             category => round_state.category,
@@ -279,7 +279,7 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
 
     let rendered = template
         .render(context! {
-            title => "Start Timer",
+            title => "~ Play ~",
             timeout => round_state.timeout,
             letter => round_state.letter,
             category => round_state.category,

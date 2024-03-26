@@ -1,10 +1,17 @@
 {% extends "layout" %}
 {% block title %}{{ super() }} | {{ title }} {% endblock %}
+{% block style %}
+mark {
+  background-color: white;
+  color: black;
+}
+{% endblock %}
 {% block body %}
 <meta http-equiv="refresh" content="1">
+<h1>{{ title }}</h1>
 <p>Timeout: <b>{{ timeout }}</b> seconds</p>
 <p>Letter: <b>{{ letter }}</b></p>
-<p>Category: <b>{{ category }}</b></p>
+<p>Category: <b><mark>{{ category }}</mark></b></p>
 
 {% if rest|length > 0 and timeout > 0 %}
   <form action="/timer" method="post">
@@ -20,6 +27,7 @@
     </label>
   </form>
 {% endif %}
+<br>
 <form action="/result" method="get">
   <label for="stop">
     <input type="submit" value="Stop">

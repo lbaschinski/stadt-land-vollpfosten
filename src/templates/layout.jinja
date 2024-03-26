@@ -2,13 +2,50 @@
 <html>
   <head>
     <title>{% block title %}Stadt Land Vollpfosten - digital helper{% endblock %}</title>
-    <style>{% block style %}{% endblock %}</style>
+    <style>{% block style %}{% endblock %}
+      nav {
+        display: flex;
+      }
+      nav>ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #333;
+      }
+      nav>ul>li {
+        float: left;
+      }
+      nav>ul>li a {
+        display: block;
+        color: white;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+      }
+      /* Change the link color to #111 (black) on hover */
+      nav>ul>li a:hover {
+        background-color: #111;
+      }
+      body {
+        font-size: x-large;
+      }
+      input {
+        font-size: large;
+      }
+      body {
+        background: url('https://i.weltbild.de/p/denkriesen-stadt-land-vollpfosten-brettspiel-364482197.jpg?v=1&wp=_max');
+        background-repeat: no-repeat;
+        background-size: cover;
+        background-color: rgba(255, 255, 255, 0.05);
+        background-blend-mode: lighten;
+      }
+    </style>
   </head>
   <body>
     <nav>
         <ul>
             <li><a href="/">Home</a></li>
-            <li><a href="/categories">Categories</a></li>
             <li><a href="/start">Start New Game</a></li>
         </ul>
     </nav>

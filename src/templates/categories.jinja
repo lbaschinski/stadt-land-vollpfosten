@@ -1,21 +1,29 @@
 {% extends "layout" %}
 {% block title %}{{ super() }} | {{ title }} {% endblock %}
+{% block style %}
+div {
+  float: right;
+  padding-right: 10%;
+}
+{% endblock %}
 {% block body %}
 <h1>{{ title }}</h1>
 {% if categories|length == 0 %}
-    No category collections entered yet!
+  <p>No category collections entered yet!</p>
 {% else %}
-  <ul>
-      {% for category in categories %}
-          <li>{{ category }}</li>
-      {% endfor %}
-  </ul>
-  <form action="/round" method="get">
-    <label for="start">
-      Want to start the game?
-      <input type="submit" value="Start">
-  </label>
-</form>
+  <div>
+    <ul>
+        {% for category in categories %}
+            <li>{{ category }}</li>
+        {% endfor %}
+    </ul>
+    <form action="/round" method="get">
+      <label for="start">
+        Want to start the game?
+        <input type="submit" value="Start">
+      </label>
+    </form>
+  <div>
 {% endif %}
 <form action="/start" method="get">
   <label for="prepare">

@@ -1,11 +1,18 @@
 {% extends "layout" %}
 {% block title %}{{ super() }} | {{ title }} {% endblock %}
+{% block style %}
+input.dice {
+  font-size: xxx-large;
+  margin-top: 10px;
+}
+{% endblock %}
 {% block body %}
+<h1>{{ title }}</h1>
 {% if first_round is defined %}
   <form action="/round" method="post">
     <label for="letter">
       Throw the dice:
-      <input type="submit" value="⚅" required>
+      <input class="dice" type="submit" value=" ⚅ " required>
     </label>
   </form>
 {% else %}
