@@ -103,6 +103,11 @@ async fn handler_home(State(state): State<Arc<GameState>>) -> Result<Html<String
 async fn handler_start_game(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("start").unwrap();
 
+    let mut categories = state.categories.lock().unwrap();
+    *categories = Vec::new();
+    let mut round_state = state.round_state.lock().unwrap();
+    *round_state = RoundState::empty();
+
     let rendered = template
         .render(context! {
             title => "Prepare Game",
