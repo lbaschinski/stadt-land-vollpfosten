@@ -15,8 +15,7 @@
     <form action="/round" method="post">
       <label for="letter">
         Throw the dice:
-        <input type="hidden" name="timeout" value="{{ timeout }}">
-        <input type="submit" name="letter" value="⚅" required>
+        <input type="submit" value="⚅" required>
       </label>
     </form>
   {% else %}
@@ -24,9 +23,7 @@
     <form action="/timer" method="post">
       <label for="round">
         Do you want to start the timer?
-        <input type="hidden" name="timeout" value="{{ timeout }}">
-        <input type="hidden" name="letter" value="{{ letter }}">
-        <input type="submit" name="round" value="Go" required>
+        <input type="submit" value="Go" required>
       </label>
     </form>
   {% endif %}

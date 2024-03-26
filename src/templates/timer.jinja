@@ -11,28 +11,18 @@
     <label for="success">
       <input type="submit" value="Success!">
       <input type="hidden" name="success" value="true">
-      <input type="hidden" name="current_index" value="{{ current_index }}">
-      <input type="hidden" name="category" value="{{ category }}">
-      <input type="hidden" name="timeout" value="{{ timeout }}">
-      <input type="hidden" name="letter" value="{{ letter }}">
     </label>
   </form>
   <form action="/timer" method="post">
     <label for="next">
       <input type="submit" value="Next!">
       <input type="hidden" name="success" value="false">
-      <input type="hidden" name="current_index" value="{{ current_index }}">
-      <input type="hidden" name="category" value="{{ category }}">
-      <input type="hidden" name="timeout" value="{{ timeout }}">
-      <input type="hidden" name="letter" value="{{ letter }}">
     </label>
   </form>
 {% endif %}
-<form action="/result" method="post">
+<form action="/result" method="get">
   <label for="stop">
     <input type="submit" value="Stop">
-    <input type="hidden" name="timeout" value="{{ timeout }}">
-    <input type="hidden" name="letter" value="{{ letter }}">
   </label>
 </form>
 {% endblock %}

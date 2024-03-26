@@ -5,22 +5,22 @@
 {% if categories|length == 0 %}
     No category collections entered yet!
 {% else %}
-    <ul>
-        {% for category in categories %}
-            <li>{{ category }}</li>
-        {% endfor %}
-    </ul>
+  <ul>
+      {% for category in categories %}
+          <li>{{ category }}</li>
+      {% endfor %}
+  </ul>
+  <form action="/round" method="get">
+    <label for="start">
+      Want to start the game?
+      <input type="submit" value="Start">
+  </label>
+</form>
 {% endif %}
 <form action="/start" method="get">
   <label for="prepare">
     Want to add more?
     <input type="submit" value="Add more">
-  </label>
-</form>
-<form action="/round" method="get">
-  <label for="start">
-    Want to start the game?
-    <input type="submit" value="Start">
   </label>
 </form>
 {% endblock %}

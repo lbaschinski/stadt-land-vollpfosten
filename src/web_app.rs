@@ -20,20 +20,27 @@ struct GameState {
 }
 
 struct RoundState {
-    timeout: u32,
+    timeout: Option<u32>,
     letter: Option<char>,
     reduced_card: Option<Vec<String>>,
     complete_card: Option<Vec<String>>,
+    category: Option<String>,
+    current_index: Option<usize>,
 }
 
 impl RoundState {
+    pub fn empty() -> RoundState {
+        Self::new(None, None, None, None, None, None)
+    }
     pub fn new
-        ( timeout: u32
+        ( timeout: Option<u32>
         , letter: Option<char>
         , reduced_card: Option<Vec<String>>
         , complete_card: Option<Vec<String>>
+        , category: Option<String>
+        , current_index: Option<usize>
     ) -> RoundState {
-        RoundState { timeout, letter, reduced_card, complete_card }
+        RoundState { timeout, letter, reduced_card, complete_card, category, current_index }
     }
 }
 
@@ -46,11 +53,8 @@ struct GameInput {
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct RoundInput {
-    timeout: u32,
-    letter: Option<char>,
-    category: Option<String>,
+    timeout: Option<u32>,
     success: Option<bool>,
-    current_index: Option<usize>,
 }
 
 pub async fn serve() {
@@ -65,7 +69,7 @@ pub async fn serve() {
 
     let game_state = Arc::new(GameState
         { categories: Mutex::new(Vec::new())
-        , round_state: Mutex::new(RoundState::new(0, None, None, None))
+        , round_state: Mutex::new(RoundState::empty())
         , environment: env
         });
 
@@ -75,7 +79,7 @@ pub async fn serve() {
         .route("/categories", get(handler_categories))
         .route("/round", get(handler_start_round).post(post_start_round))
         .route("/timer", post(post_start_timer))
-        .route("/result", post(post_result))
+        .route("/result", get(handler_result))
         .with_state(game_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3333").await.unwrap();
@@ -155,11 +159,12 @@ async fn post_start_round(State(state): State<Arc<GameState>>, Form(input): Form
     let template = state.environment.get_template("round").unwrap();
 
     let mut round_state = state.round_state.lock().unwrap();
-    *round_state = RoundState::new(input.timeout, input.letter, None, None);
-
-    if input.letter.is_some() {
+    if input.timeout.is_some() { // first input is only timeout
+        *round_state = RoundState::new(input.timeout, round_state.letter, None, None, None, None);
+    }
+    if input.timeout.is_none() && round_state.letter.is_none() { // second input is to roll (without timeout set again)
         let letter = dice::roll_dice().chars().next();
-        *round_state = RoundState::new(round_state.timeout, letter, None, None);
+        *round_state = RoundState::new(round_state.timeout, letter, None, None, None, None);
     }
 
     let rendered = template
@@ -179,23 +184,24 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
 
     let mut round_state = state.round_state.lock().unwrap();
     let categories = state.categories.lock().unwrap();
-    let mut current_index = input.current_index.unwrap_or(0);
-    let category_amount;
+    let mut current_index = round_state.current_index.unwrap_or(0);
+    let mut category_amount;
 
     let (reduced_card, complete_card) = match &round_state.complete_card {
         Some(c) => {
             let cc = c.to_vec();
             let mut rc = round_state.reduced_card.clone().unwrap();
             let success = input.success.unwrap();
-            let category = input.category.unwrap();
+            category_amount = round_state.reduced_card.as_ref().unwrap().len();
             if success {
-                let i = rc.iter().position(|x| *x == category).unwrap();
-                // since this removes the current element, we don't need to `+1` the `current_index` here
-                // since the next element is now at the index of the removed element
+                let old_category = round_state.category.clone().unwrap();
+                let i = rc.iter().position(|x| *x == old_category).unwrap();
                 rc.remove(i);
+                category_amount -= 1;
+                // since an element was removed, do nothing to the index or `-1` (if last element)
+                current_index = if i == 0 || i < category_amount { i } else { i - 1 };
             } else {
-                // since no element was removed, either go back to 0 or `+1` to the current index
-                category_amount = round_state.reduced_card.as_ref().unwrap().len();
+                // since no element was removed, either go back to 0 (if last element) or `+1`
                 current_index = if current_index == (category_amount - 1) { 0 } else { current_index + 1 };
             }
             (rc, cc)
@@ -206,35 +212,45 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
             (dc.clone(), dc)
         },
     };
-    *round_state = RoundState::new(input.timeout, input.letter, Some(reduced_card.clone()), Some(complete_card.clone()));
-    // size of `reduced_card` and `current_index` need to be aligned!
     category = reduced_card[current_index].clone();
+    *round_state = RoundState::new
+        ( round_state.timeout
+        , round_state.letter
+        , Some(reduced_card.clone())
+        , Some(complete_card.clone())
+        , Some(category)
+        , Some(current_index)
+    );
 
     let rendered = template
         .render(context! {
             title => "Start Timer",
             timeout => round_state.timeout,
             letter => round_state.letter,
-            category => category,
-            current_index => current_index,
-            rest => reduced_card
+            category => round_state.category,
+            current_index => round_state.current_index,
+            rest => round_state.reduced_card
         })
         .unwrap();
 
     Ok(Html(rendered))
 }
 
-async fn post_result(State(state): State<Arc<GameState>>, Form(input): Form<RoundInput>) -> Result<Html<String>, StatusCode> {
+async fn handler_result(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("result").unwrap();
 
-    let round_state = state.round_state.lock().unwrap();
+    let mut round_state = state.round_state.lock().unwrap();
+    let old_timeout = round_state.timeout.clone();
+    let old_letter = round_state.letter.clone();
+    let old_card = round_state.complete_card.clone();
+    *round_state = RoundState::empty();
 
     let rendered = template
         .render(context! {
             title => "Round Results",
-            timeout => input.timeout,
-            letter => input.letter,
-            card => round_state.complete_card,
+            timeout => old_timeout,
+            letter => old_letter,
+            card => old_card,
         })
         .unwrap();
 
