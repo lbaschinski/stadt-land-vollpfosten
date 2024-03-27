@@ -1,8 +1,9 @@
 use axum::{
+    body::Body,
     extract::State,
     extract::Form,
-    http::StatusCode,
-    response::Html,
+    http::{StatusCode, header},
+    response::{Html, IntoResponse},
     routing::get,
     Router,
 };
@@ -12,6 +13,8 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
+use tokio::fs::File;
+use tokio_util::io::ReaderStream;
 
 use crate::cards;
 use crate::dice;
@@ -90,6 +93,7 @@ pub async fn serve() {
 
     let app = Router::new()
         .route("/", get(handler_home))
+        .route("/slv.png", get(get_background_png))
         .route("/start", get(handler_start_game).post(post_start_game))
         .route("/categories", get(handler_categories).post(post_categories))
         .route("/round", get(handler_start_round).post(post_start_round))
@@ -145,6 +149,25 @@ async fn handler_home(State(state): State<Arc<GameState>>) -> Result<Html<String
         .unwrap();
 
     Ok(Html(rendered))
+}
+
+/// Get handler which responds with the background image.
+async fn get_background_png() -> impl IntoResponse {
+    let path = format!("src/img/slv.png");
+    let file = match File::open(path).await {
+        Ok(file) => file,
+        Err(err) => return Err((StatusCode::NOT_FOUND, format!("File not found: {}", err)))
+    };
+    let stream = ReaderStream::new(file);
+    let body = Body::from_stream(stream);
+    let headers = [
+        (header::CONTENT_TYPE, "image/png"),
+        (
+            header::CONTENT_DISPOSITION,
+            "attachment; filename=\"slv.png\"",
+        ),
+        ];
+    Ok((headers, body))
 }
 
 /// Get handler to prepare a game. Simply displays a page to put in a `collection_name`.
