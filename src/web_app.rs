@@ -81,7 +81,7 @@ pub async fn serve() {
     let app = Router::new()
         .route("/", get(handler_home))
         .route("/start", get(handler_start_game).post(post_start_game))
-        .route("/categories", get(handler_categories))
+        .route("/categories", get(handler_categories).post(post_categories))
         .route("/round", get(handler_start_round).post(post_start_round))
         .route("/timer", get(handler_start_timer).post(post_start_timer))
         .route("/result", get(handler_result))
@@ -136,8 +136,6 @@ async fn handler_home(State(state): State<Arc<GameState>>) -> Result<Html<String
 async fn handler_start_game(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("start").unwrap();
 
-    let mut categories = state.categories.lock().unwrap();
-    *categories = Vec::new();
     let mut round_state = state.round_state.lock().unwrap();
     *round_state = RoundState::empty();
 
@@ -150,18 +148,17 @@ async fn handler_start_game(State(state): State<Arc<GameState>>) -> Result<Html<
     Ok(Html(rendered))
 }
 
-async fn post_start_game(State(state): State<Arc<GameState>>, Form(input): Form<GameInput>) -> Result<Html<String>, StatusCode> {
-    let template = state.environment.get_template("categories").unwrap();
-    let categories = cards::load_categories(&input.collection_name);
-    {
-        let mut cat = state.categories.lock().unwrap();
-        cat.extend(categories.clone());
-    }
+async fn post_start_game(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
+    let template = state.environment.get_template("start").unwrap();
+
+    let mut categories = state.categories.lock().unwrap();
+    *categories = Vec::new();
+    let mut round_state = state.round_state.lock().unwrap();
+    *round_state = RoundState::empty();
 
     let rendered = template
         .render(context! {
-            title => "Categories",
-            categories => state.categories,
+            title => "Prepare Game",
         })
         .unwrap();
 
@@ -181,8 +178,30 @@ async fn handler_categories(State(state): State<Arc<GameState>>) -> Result<Html<
     Ok(Html(rendered))
 }
 
+async fn post_categories(State(state): State<Arc<GameState>>, Form(input): Form<GameInput>) -> Result<Html<String>, StatusCode> {
+    let template = state.environment.get_template("categories").unwrap();
+
+    let categories = cards::load_categories(&input.collection_name);
+    {
+        let mut cat = state.categories.lock().unwrap();
+        cat.extend(categories.clone());
+    }
+
+    let rendered = template
+        .render(context! {
+            title => "Categories",
+            categories => state.categories,
+        })
+        .unwrap();
+
+    Ok(Html(rendered))
+}
+
 async fn handler_start_round(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("round").unwrap();
+
+    let mut round_state = state.round_state.lock().unwrap();
+    *round_state = RoundState::empty();
 
     let rendered = template
         .render(context! {

@@ -2,7 +2,7 @@
 {% block title %}{{ super() }} | {{ title }} {% endblock %}
 {% block body %}
 <h1>{{ title }}</h1>
-<form action="/start" method="post">
+<form action="/categories" method="post">
   <label for="collection_name">
     Enter one of the following categories: 'default', 'junior', 'adult':
     <input type="text" name="collection_name" required>
