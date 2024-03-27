@@ -47,6 +47,7 @@ fn start_round(category_collection: &Vec<String>) {
     println!()
 }
 
+/// Add new categories to existing collections.
 pub fn add_categories() {
     println!("Please choose a category to add to:");
     println!("- default");
@@ -87,6 +88,8 @@ pub fn add_categories() {
     }
 }
 
+/// Start the game by choosing category collections
+/// and starting a new round.
 pub fn start_game() {
     let category_collection = cards::choose_collections();
 

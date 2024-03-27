@@ -16,12 +16,14 @@ use std::time::Duration;
 use crate::cards;
 use crate::dice;
 
+/// Game state that is fixed per session
 struct GameState {
     categories: Mutex<Vec<String>>,
     round_state: Mutex<RoundState>,
     environment: Environment<'static>,
 }
 
+/// RoundState that is cleaned before each new round
 struct RoundState {
     timeout: Option<u32>,
     letter: Option<char>,
@@ -32,9 +34,12 @@ struct RoundState {
 }
 
 impl RoundState {
+    /// Create an empty RoundState
     pub fn empty() -> RoundState {
         Self::new(None, None, None, None, None, None)
     }
+    /// Create a new RoundState with the given fields
+    /// Todo: update state instead of overwriding
     pub fn new
         ( timeout: Option<u32>
         , letter: Option<char>
@@ -49,17 +54,20 @@ impl RoundState {
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
+/// Input to set up a game session, used to set `GameState`
 struct GameInput {
     collection_name: String,
 }
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
+/// New input for each round, used to set `RoundState`
 struct RoundInput {
     timeout: Option<u32>,
     success: Option<bool>,
 }
 
+/// Serves the game app and spawns a timeout-checking thread
 pub async fn serve() {
     let mut env = Environment::new();
     env.add_template("layout", include_str!("./templates/layout.jinja")).unwrap();
@@ -70,12 +78,14 @@ pub async fn serve() {
     env.add_template("timer", include_str!("./templates/timer.jinja")).unwrap();
     env.add_template("result", include_str!("./templates/result.jinja")).unwrap();
 
+    // Prepare `GameState` with empty state and the environment
     let game_state = Arc::new(GameState
         { categories: Mutex::new(Vec::new())
         , round_state: Mutex::new(RoundState::empty())
         , environment: env
         });
 
+    // Spawns a timeout thread that counts down the timeout of each round if set
     let handle = spawn_timeout_thread(Arc::clone(&game_state));
 
     let app = Router::new()
@@ -93,6 +103,9 @@ pub async fn serve() {
     handle.join().unwrap();
 }
 
+/// Spawn a thread that loops indefinitely.
+/// Each loop puts the thread to sleep for 1 second and reduces the
+/// timeout variable by 1 if set and not 0 already.
 fn spawn_timeout_thread(state: Arc<GameState>) -> thread::JoinHandle<()> {
     thread::spawn(move || {
         loop {
@@ -120,6 +133,7 @@ fn spawn_timeout_thread(state: Arc<GameState>) -> thread::JoinHandle<()> {
     })
 }
 
+/// Handler for "Home". Does nothing in particular.
 async fn handler_home(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("home").unwrap();
 
@@ -133,6 +147,8 @@ async fn handler_home(State(state): State<Arc<GameState>>) -> Result<Html<String
     Ok(Html(rendered))
 }
 
+/// Get handler to prepare a game. Simply displays a page to put in a `collection_name`.
+/// Clears the `RoundState` too.
 async fn handler_start_game(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("start").unwrap();
 
@@ -148,6 +164,9 @@ async fn handler_start_game(State(state): State<Arc<GameState>>) -> Result<Html<
     Ok(Html(rendered))
 }
 
+/// Post handler for preparing a game. Is used when the user wants to delete all saved collections.
+/// Work-around - since "input" does not allow for "delete" method and we don't need the post handler
+/// for anything else. Clears the `RoundState` too.
 async fn post_start_game(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("start").unwrap();
 
@@ -165,6 +184,7 @@ async fn post_start_game(State(state): State<Arc<GameState>>) -> Result<Html<Str
     Ok(Html(rendered))
 }
 
+/// Get handler for displaying all categories.
 async fn handler_categories(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("categories").unwrap();
 
@@ -178,6 +198,7 @@ async fn handler_categories(State(state): State<Arc<GameState>>) -> Result<Html<
     Ok(Html(rendered))
 }
 
+/// Post handler for adding new category collections and displaying all afterwards.
 async fn post_categories(State(state): State<Arc<GameState>>, Form(input): Form<GameInput>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("categories").unwrap();
 
@@ -197,6 +218,9 @@ async fn post_categories(State(state): State<Arc<GameState>>, Form(input): Form<
     Ok(Html(rendered))
 }
 
+/// Get handler to start a new round. Displays the "please roll the dice" button.
+/// Deletes the `RoundState` again, since the user can reach this without setting up new
+/// category collections.
 async fn handler_start_round(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("round").unwrap();
 
@@ -213,6 +237,8 @@ async fn handler_start_round(State(state): State<Arc<GameState>>) -> Result<Html
     Ok(Html(rendered))
 }
 
+/// Post handler for a new round. Handles the dice roll and displays the additional
+/// input of the current timeout.
 async fn post_start_round(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("round").unwrap();
 
@@ -232,7 +258,8 @@ async fn post_start_round(State(state): State<Arc<GameState>>) -> Result<Html<St
     Ok(Html(rendered))
 }
 
-// Needed for refreshing the page to show the running timer (never called directly)
+/// Get handler for a timed round. Is called when a refresh happens, never directly in the app.
+/// Simply displays the current round state.
 async fn handler_start_timer(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("timer").unwrap();
 
@@ -252,9 +279,11 @@ async fn handler_start_timer(State(state): State<Arc<GameState>>) -> Result<Html
     Ok(Html(rendered))
 }
 
+/// Post handler for a timed round. Is called when the user sets the timeout and therefore starts the timed round;
+/// drawing the categories that belong to that round; and handling the state when the "Success" or "Next" button are pressed.
 async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form<RoundInput>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("timer").unwrap();
-    let category: Option<String>;
+    let category: String;
 
     let mut round_state = state.round_state.lock().unwrap();
     let categories = state.categories.lock().unwrap();
@@ -262,12 +291,14 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
     let mut category_amount;
 
     let (reduced_card, complete_card) = match &round_state.complete_card {
+        // not first round, need to handle the state
         Some(c) => {
             let cc = c.to_vec();
             let mut rc = round_state.reduced_card.clone().unwrap();
             let success = input.success.unwrap();
             category_amount = round_state.reduced_card.as_ref().unwrap().len();
             if success {
+                // if successful: remove the category from the set
                 let old_category = round_state.category.clone().unwrap();
                 let i = rc.iter().position(|x| *x == old_category).unwrap();
                 rc.remove(i);
@@ -275,24 +306,28 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
                 // since an element was removed, do nothing to the index or `-1` (if last element)
                 current_index = if i == 0 || i < category_amount { i } else { i - 1 };
             } else {
-                // since no element was removed, either go back to 0 (if last element) or `+1`
+                // not successful (next button):
+                // since no element was removed, either go back to 0 (if last element) or increase index by 1
                 current_index = if current_index == (category_amount - 1) { 0 } else { current_index + 1 };
             }
             (rc, cc)
         },
+        // first round, need to draw the new categories
         None => {
-            category_amount = 6;
+            category_amount = 6; // potential todo: make this configurable?
             let dc = cards::draw_card(&categories, category_amount as u32);
             (dc.clone(), dc)
         },
     };
-    category = if reduced_card.len() == 0 { None } else { Some(reduced_card[current_index].clone()) };
+    // if all categories were successfully challenged (`reduced_card` is empty), simply put a placeholder
+    // since the view does not display a `category` then anyway
+    category = if reduced_card.len() == 0 { "".to_string() } else { reduced_card[current_index].clone() };
     *round_state = RoundState::new
-        ( if input.timeout.is_some() { input.timeout } else { round_state.timeout }
+        ( if input.timeout.is_some() { input.timeout } else { round_state.timeout } // first round timeout setup
         , round_state.letter
         , Some(reduced_card.clone())
         , Some(complete_card.clone())
-        , category
+        , Some(category)
         , Some(current_index)
     );
 
@@ -310,6 +345,8 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
     Ok(Html(rendered))
 }
 
+/// Get handler to display a rounds results.
+/// Better be save than sorry: delete the `RoundState` here too.
 async fn handler_result(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("result").unwrap();
 
