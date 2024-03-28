@@ -42,7 +42,6 @@ impl RoundState {
         Self::new(None, None, None, None, None, None)
     }
     /// Create a new RoundState with the given fields
-    /// Todo: update state instead of overwriding
     pub fn new
         ( timeout: Option<u32>
         , letter: Option<char>
@@ -52,6 +51,25 @@ impl RoundState {
         , current_index: Option<usize>
     ) -> RoundState {
         RoundState { timeout, letter, reduced_card, complete_card, category, current_index }
+    }
+    /// Update a RoundState with the given value
+    pub fn update_timeout(&mut self, timeout: Option<u32>) {
+        self.timeout = timeout;
+    }
+    pub fn update_letter(&mut self, letter: Option<char>) {
+        self.letter = letter;
+    }
+    pub fn update_reduced_card(&mut self, reduced_card: Option<Vec<String>>) {
+        self.reduced_card = reduced_card;
+    }
+    pub fn update_complete_card(&mut self, complete_card: Option<Vec<String>>) {
+        self.complete_card = complete_card;
+    }
+    pub fn update_category(&mut self, category: Option<String>) {
+        self.category = category;
+    }
+    pub fn update_current_index(&mut self, current_index: Option<usize>) {
+        self.current_index = current_index;
     }
 }
 
@@ -115,23 +133,9 @@ fn spawn_timeout_thread(state: Arc<GameState>) -> thread::JoinHandle<()> {
         loop {
             thread::sleep(Duration::from_secs(1));
             let mut round_state = state.round_state.lock().unwrap();
-            *round_state = match round_state.timeout {
-                Some(t) => RoundState::new
-                    ( Some(if t > 0 { t - 1 } else { t })
-                    , round_state.letter
-                    , round_state.reduced_card.clone()
-                    , round_state.complete_card.clone()
-                    , round_state.category.clone()
-                    , round_state.current_index
-                    ),
-                None => RoundState::new
-                    ( round_state.timeout
-                    , round_state.letter
-                    , round_state.reduced_card.clone()
-                    , round_state.complete_card.clone()
-                    , round_state.category.clone()
-                    , round_state.current_index
-                    ),
+            if round_state.timeout.is_some() {
+                let t = round_state.timeout.unwrap();
+                round_state.update_timeout(Some(if t > 0 { t - 1 } else { t }));
             };
         };
     })
@@ -268,7 +272,8 @@ async fn post_start_round(State(state): State<Arc<GameState>>) -> Result<Html<St
     let mut round_state = state.round_state.lock().unwrap();
     if round_state.letter.is_none() {
         let letter = dice::roll_dice().chars().next();
-        *round_state = RoundState::new(None, letter, None, None, None, None);
+        *round_state = RoundState::empty(); // be sure to empty the state before starting a new round
+        round_state.update_letter(letter);
     }
 
     let rendered = template
@@ -345,14 +350,14 @@ async fn post_start_timer(State(state): State<Arc<GameState>>, Form(input): Form
     // if all categories were successfully challenged (`reduced_card` is empty), simply put a placeholder
     // since the view does not display a `category` then anyway
     category = if reduced_card.len() == 0 { "".to_string() } else { reduced_card[current_index].clone() };
-    *round_state = RoundState::new
-        ( if input.timeout.is_some() { input.timeout } else { round_state.timeout } // first round timeout setup
-        , round_state.letter
-        , Some(reduced_card.clone())
-        , Some(complete_card.clone())
-        , Some(category)
-        , Some(current_index)
-    );
+    // first round only setup
+    if input.timeout.is_some() {
+        round_state.update_timeout(input.timeout);
+        round_state.update_complete_card(Some(complete_card.clone()));
+    }
+    round_state.update_reduced_card(Some(reduced_card.clone()));
+    round_state.update_category(Some(category));
+    round_state.update_current_index(Some(current_index));
 
     let rendered = template
         .render(context! {
