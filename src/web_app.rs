@@ -1,5 +1,4 @@
 use axum::{
-    body::Body,
     extract::State,
     extract::Form,
     http::{StatusCode, header},
@@ -8,16 +7,19 @@ use axum::{
     Router,
 };
 use minijinja::{context, Environment};
+use rust_embed_for_web::{EmbedableFile, RustEmbed};
 use serde::Deserialize;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
-use tokio::fs::File;
-use tokio_util::io::ReaderStream;
 
 use crate::cards;
 use crate::dice;
+
+#[derive(RustEmbed)]
+#[folder = "src/assets/"]
+struct Asset;
 
 /// Game state that is fixed per session
 struct GameState {
@@ -156,22 +158,13 @@ async fn handler_home(State(state): State<Arc<GameState>>) -> Result<Html<String
 }
 
 /// Get handler which responds with the background image.
-async fn get_background_png() -> impl IntoResponse {
-    let path = format!("src/img/slv.png");
-    let file = match File::open(path).await {
-        Ok(file) => file,
-        Err(err) => return Err((StatusCode::NOT_FOUND, format!("File not found: {}", err)))
-    };
-    let stream = ReaderStream::new(file);
-    let body = Body::from_stream(stream);
-    let headers = [
-        (header::CONTENT_TYPE, "image/png"),
-        (
-            header::CONTENT_DISPOSITION,
-            "attachment; filename=\"slv.png\"",
-        ),
-        ];
-    Ok((headers, body))
+async fn get_background_png(uri: axum::http::Uri) -> impl IntoResponse {
+    match Asset::get(uri.path().trim_start_matches('/')) {
+        Some(content) => {
+            ([(header::CONTENT_TYPE, "image/png")], content.data()).into_response()
+        }
+        None => (StatusCode::NOT_FOUND, "404 Not Found").into_response(),
+    }
 }
 
 /// Get handler to prepare a game. Simply displays a page to put in a `collection_name`.

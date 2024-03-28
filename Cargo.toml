@@ -11,6 +11,7 @@ axum = "0.7.4"
 crossterm = "0.27.0"
 minijinja = "1.0.13"
 rand = "0.8.5"
+rust-embed-for-web="11.1.4"
 serde = { version="1.0.197", features = ["derive"] }
 tokio = { version = "1.36.0", features = ["full"] }
 tokio-test="0.4.4"
