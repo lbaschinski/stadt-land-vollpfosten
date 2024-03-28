@@ -1,7 +1,7 @@
 use axum::{
     extract::State,
     extract::Form,
-    http::{StatusCode, header},
+    http::{StatusCode, Uri, header},
     response::{Html, IntoResponse},
     routing::get,
     Router,
@@ -119,6 +119,7 @@ pub async fn serve() {
         .route("/round", get(handler_start_round).post(post_start_round))
         .route("/timer", get(handler_start_timer).post(post_start_timer))
         .route("/result", get(handler_result))
+        .route("/*uri", get(not_found))
         .with_state(game_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3333").await.unwrap();
@@ -143,6 +144,23 @@ fn spawn_timeout_thread(state: Arc<GameState>) -> thread::JoinHandle<()> {
     })
 }
 
+// Fallback route for anything that doesn't match
+async fn not_found(State(state): State<Arc<GameState>>, uri: Uri) -> impl IntoResponse {
+    // Re-use "home" template since it has the same format
+    let template = state.environment.get_template("home").unwrap();
+
+    let path = uri.path().trim_start_matches('/');
+
+    let rendered = template
+        .render(context! {
+            title => "404",
+            welcome_text => format!("Not Found: /{path}"),
+        })
+        .unwrap();
+
+    (StatusCode::NOT_FOUND, Html(rendered)).into_response()
+}
+
 /// Handler for "Home". Does nothing in particular.
 async fn handler_home(State(state): State<Arc<GameState>>) -> Result<Html<String>, StatusCode> {
     let template = state.environment.get_template("home").unwrap();
@@ -158,7 +176,7 @@ async fn handler_home(State(state): State<Arc<GameState>>) -> Result<Html<String
 }
 
 /// Get handler which responds with the background image.
-async fn get_background_png(uri: axum::http::Uri) -> impl IntoResponse {
+async fn get_background_png(uri: Uri) -> impl IntoResponse {
     match Asset::get(uri.path().trim_start_matches('/')) {
         Some(content) => {
             ([(header::CONTENT_TYPE, "image/png")], content.data()).into_response()
